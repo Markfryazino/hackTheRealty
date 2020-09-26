@@ -17,7 +17,7 @@ def get_data(train, base, test=None, cv_ratio=None):
     y = train['avg_price_sqm']
     val = None
     if cv_ratio is not None:
-        train, val, yt, yv = train_test_split(train, y, test_size=cv_ratio)
+        train, val, yt, yv = train_test_split(train, y, test_size=cv_ratio, shuffle=False)
 
     mapping = build_mapping(train, base)
     train = preprocess(train, mapping)
@@ -32,6 +32,7 @@ def get_data(train, base, test=None, cv_ratio=None):
 
 
 def pipeline(model, train, base, test=None, cv_ratio=None):
+    train = train.sample(frac=1.).reset_index(drop=True).sort_values('month', ignore_index=True)
     data = get_data(train, base, test, cv_ratio)
     print('Data processed')
     if cv_ratio is None:
