@@ -22,7 +22,7 @@ def cor2dist(lat1, lon1, lat2, lon2):
 
 
 def get_tube_cords():
-    with open('tube.txt') as f:
+    with open('utils/tube.txt') as f:
         return eval(f.read())
 
 
@@ -39,7 +39,7 @@ def closest_tube(data: pd.Series):
     return pd.DataFrame(res, columns=['dist_to_closest_tube', 'line_color'])
 
 
-def angleFromCoordinate(lat1, long1, lat2, long2):
+def angle_from_coordinate(lat1, long1, lat2, long2):
     dLon = (long2 - long1)
 
     y = math.sin(dLon) * math.cos(lat2)
@@ -61,8 +61,7 @@ def dist_to_center(data: pd.Series):
 
     x, y = 55.751388, 37.618841
 
-    angle = data.apply(lambda c: angleFromCoordinate(x, y, c[0], c[1]))
+    angle = data.apply(lambda c: angle_from_coordinate(x, y, c[0], c[1]))
     dist = data.apply(lambda c: (cor2dist(c[0], c[1], x, y)))
-    print([angle.values.reshape(-1, 1), dist.values.reshape(-1, 1)])
     return pd.DataFrame(np.hstack([angle.values.reshape(-1, 1), dist.values.reshape(-1, 1)]),
                         columns=['angle', 'dist'])
