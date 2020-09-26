@@ -13,13 +13,13 @@ def invmape(y_true, y_pred):
     return 100. - mape(y_true, y_pred)
 
 
-def get_data(train, base, test=None, cv_ratio=None):
+def get_data(train, base, test=None, cv_ratio=None, path='../utils/'):
     y = train['avg_price_sqm']
     val = None
     if cv_ratio is not None:
-        train, val, yt, yv = train_test_split(train, y, test_size=cv_ratio)
+        train, val, yt, yv = train_test_split(train, y, test_size=cv_ratio, shuffle=False)
 
-    mapping = build_mapping(train, base)
+    mapping = build_mapping(train, base, path)
     train = preprocess(train, mapping)
     res = [(train, yt)]
     if val is not None:
@@ -31,8 +31,9 @@ def get_data(train, base, test=None, cv_ratio=None):
     return res
 
 
-def pipeline(model, train, base, test=None, cv_ratio=None):
-    data = get_data(train, base, test, cv_ratio)
+def pipeline(model, train, base, test=None, cv_ratio=None, path='../utils/'):
+    train = train.sample(frac=1.).reset_index(drop=True).sort_values('month', ignore_index=True)
+    data = get_data(train, base, test, cv_ratio, path=path)
     print('Data processed')
     if cv_ratio is None:
         val = None
