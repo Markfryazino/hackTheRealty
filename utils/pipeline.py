@@ -47,6 +47,12 @@ def pipeline(model, train, base, test=None, cv_ratio=None):
         metric = invmape(data[1][1], val_pred)
         print(f'Метрика на валидации: {metric}')
 
+    artifacts = {'data': data, 'model': model,
+                 'importances': sorted(zip(model.model.feature_importances_,
+                                           list(data[0][0].columns)), reverse=True)}
+
     if test is not None:
         pred = model.predict(data[-1])
-        return pred
+        return pred, artifacts
+
+    return artifacts

@@ -14,6 +14,7 @@ def load_data(PATH='data/P/'):
 def build_mapping(train, base):
     keys = set(base['city_quadkey'])
     kd = pd.DataFrame(pd.Series(list(keys), name='quadkeys'))
+    base = pd.concat([base, pd.get_dummies(base['building_type'])], axis=1)
 
     district_cols = ['beauty_cnt', 'shopping_cnt', 'cafe_restaurant_eating_out_cnt', 'entertainment_cnt',
                      'sport_cnt', 'chain_cnt', 'groceries_and_everyday_items_cnt', 'art_cnt', 'healthcare_cnt',
@@ -23,9 +24,27 @@ def build_mapping(train, base):
                   'expect_demolition', 'latitude', 'longitude', 'ceiling_height', 'has_elevator',
                   'build_year']
 
+    float_cols = ['flats_count', 'ceiling_height', 'build_year']
+    bin_cols = ['expect_demolition', 'has_elevator', 'BLOCK', 'BRICK', 'MONOLIT',
+                'MONOLIT_BRICK', 'PANEL', 'UNKNOWN', 'WOOD']
+
     bd = base[district_cols + ['city_quadkey']].set_index('city_quadkey').drop_duplicates()
 
     joint = kd.join(bd, on='quadkeys')
+
+    aggs_count = base.groupby('city_quadkey')['longitude'].count()
+    aggs_float = base.groupby('city_quadkey')[float_cols].agg(['mean', 'median'])
+    aggs_bin = base.groupby('city_quadkey')[bin_cols].agg('mean')
+
+    aggs = pd.DataFrame(pd.Series(aggs_count, name='count'))
+    for fun in ['mean', 'median']:
+        for col in float_cols:
+            aggs[col + '_' + fun] = aggs_float[col][fun]
+
+    for col in bin_cols:
+        aggs[col + '_mean'] = aggs_bin[col]
+
+    joint = joint.join(aggs, on='quadkeys')
 
     to_rm = ['avg_price_sqm', 'month', 'city_quadkey', 'median_price_sqm']
     feats = list(train.columns)
