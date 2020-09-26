@@ -21,17 +21,17 @@ def cor2dist(lat1, lon1, lat2, lon2):
     return R * c
 
 
-def get_tube_cords():
-    with open('utils/tube.txt') as f:
+def get_tube_cords(path='utils/'):
+    with open(path + 'tube.txt') as f:
         return eval(f.read())
 
 
-def closest_tube(data: pd.Series):
+def closest_tube(data: pd.Series, path='utils/'):
     """
     Gets pd.Series with cordinates (Lat, Lon),
     returns distance to the closest tube station and color of the line.
     """
-    tube = list(get_tube_cords().items())
+    tube = list(get_tube_cords(path).items())
     res = []
     for line in data:
         tube.sort(key=lambda x: cor2dist(x[0][0], x[0][1], line[0], line[1]))

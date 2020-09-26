@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from .preproc import dist_to_center, closest_tube
 
 
 def load_data(PATH='data/P/'):
@@ -11,20 +12,22 @@ def load_data(PATH='data/P/'):
     return base, train, test, sample
 
 
-def build_mapping(train, base):
+def build_mapping(train, base, path='../utils/'):
     keys = set(base['city_quadkey'])
     kd = pd.DataFrame(pd.Series(list(keys), name='quadkeys'))
     base = pd.concat([base, pd.get_dummies(base['building_type'])], axis=1)
+
+    latlon = pd.Series(list(zip(base.latitude.values, base.longitude.values)))
+    d2c = dist_to_center(latlon)
+    ct = closest_tube(latlon, path=path)
+    base = pd.concat([d2c, ct, base], axis=1)
 
     district_cols = ['beauty_cnt', 'shopping_cnt', 'cafe_restaurant_eating_out_cnt', 'entertainment_cnt',
                      'sport_cnt', 'chain_cnt', 'groceries_and_everyday_items_cnt', 'art_cnt', 'healthcare_cnt',
                      'laundry_and_repair_services_cnt']
 
-    house_cols = ['building_series_id', 'flats_count', 'building_type', 'unified_address',
-                  'expect_demolition', 'latitude', 'longitude', 'ceiling_height', 'has_elevator',
-                  'build_year']
-
-    float_cols = ['flats_count', 'ceiling_height', 'build_year']
+    float_cols = ['flats_count', 'ceiling_height', 'build_year', 'angle', 'dist',
+                  'dist_to_closest_tube']
     bin_cols = ['expect_demolition', 'has_elevator', 'BLOCK', 'BRICK', 'MONOLIT',
                 'MONOLIT_BRICK', 'PANEL', 'UNKNOWN', 'WOOD']
 
@@ -43,6 +46,8 @@ def build_mapping(train, base):
 
     for col in bin_cols:
         aggs[col + '_mean'] = aggs_bin[col]
+
+    aggs['line_color'] = base.groupby('city_quadkey')['line_color'].agg(lambda x: x.value_counts().index[0])
 
     joint = joint.join(aggs, on='quadkeys')
 
