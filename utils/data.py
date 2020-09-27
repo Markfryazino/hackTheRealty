@@ -1,9 +1,12 @@
 import pandas as pd
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 from .preproc import dist_to_center, closest_tube
 from sklearn.linear_model import LinearRegression
 from tqdm import tqdm_notebook as tqdm
+from scipy.stats import pearsonr, spearmanr
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 def load_data(PATH='data/P/'):
@@ -96,8 +99,8 @@ def to_mat(test, deg):
     return arr.values
 
 
-def fit_general(train_x, train_y):
-    temp = train_x[['month']]
+def fit_general(train_x, train_y, start_date):
+    temp = train_x[['month']][train_x['month'] >= start_date]
     temp['y'] = train_y
 
     X, y = for_reg(temp, 2)
@@ -116,31 +119,44 @@ def plot_model(coef):
     plt.plot(to_draw, to_pred * coef['c1'] + to_pred * to_pred * coef['c2'] + coef['bias'])
 
 
-def build_ans(train_x, train_y, general_coef, min_num=10):
+def build_ans(train_x, train_y, deg=2):
     qk = train_x['city_quadkey'].unique()
 
     temp = train_x[['city_quadkey', 'month']]
     temp['y'] = train_y
 
-    ans = pd.DataFrame(columns=['city_quadkey', 'bias', 'c1', 'c2'])
+    if deg == 1:
+        ans = pd.DataFrame(columns=['city_quadkey', 'bias', 'c1'])
+    elif deg == 2:
+        ans = pd.DataFrame(columns=['city_quadkey', 'bias', 'c1', 'c2', 'pearson', 'spearman'])
     for key in tqdm(qk):
         here = temp[temp['city_quadkey'] == key]
-        X, y = for_reg(here.drop('city_quadkey', axis=1), 2)
-        model = LinearRegression()
-        model.fit(X, y)
-        ans = ans.append({'city_quadkey': key, 'bias': model.intercept_, 'c1': model.coef_[0],
-                          'c2': model.coef_[1]}, ignore_index=True)
+        X, y = for_reg(here.drop('city_quadkey', axis=1), deg)
+        if X.shape[0] != 0:
+            model = LinearRegression()
+            model.fit(X, y)
+            mae = mean_absolute_error(model.predict(X), y)
+            mse = mean_squared_error(model.predict(X), y)
+
+            if X.shape[0] > 1:
+                pearson = pearsonr(X[:, 0], y)[0]
+                spearman = spearmanr(X[:, 0], y)[1]
+            else:
+                pearson = spearman = -42
+
+            if deg == 1:
+                ans = ans.append({'city_quadkey': key, 'bias': model.intercept_, 'c1': model.coef_[0],
+                                  'mse': mse, 'mae': mae},
+                                 ignore_index=True)
+            elif deg == 2:
+                ans = ans.append({'city_quadkey': key, 'bias': model.intercept_, 'c1': model.coef_[0],
+                                  'c2': model.coef_[1], 'pearson': pearson,
+                                  'spearman': spearman, 'mse': mse, 'mae': mae}, ignore_index=True)
 
     ans = ans.join(train_x.groupby('city_quadkey').count()['month'], on='city_quadkey')
+    ans.rename(columns={'month': 'cnt_months'}, inplace=True)
     ans = ans.set_index('city_quadkey')
 
-    for key in ans.index:
-        if ans.loc[key]['month'] < min_num:
-            ans.loc[key, 'bias'] = general_coef['bias']
-            ans.loc[key, 'c1'] = general_coef['c1']
-            ans.loc[key, 'c2'] = general_coef['c2']
-
-    ans.drop('month', axis=1, inplace=True)
     return ans
 
 
@@ -154,7 +170,7 @@ def plot_random_quadkey(ans, train_x, train_y):
                 'c2': ans.loc[key, 'c2']})
 
 
-def proc(dset, general_coef):
+def proc(dset, general_coef, ans):
     dset = dset.join(ans, on='city_quadkey')
     dset['days'] = dset['month'].apply(month_to_days)
     dset['c1'].fillna(general_coef['c1'], inplace=True)
@@ -167,12 +183,12 @@ def proc(dset, general_coef):
     return dset, pred
 
 
-def get_all(data):
-    general_coef, general_model = fit_general(data[0][0], data[0][1])
-    ans = build_ans(data[0][0], data[0][1], general_coef, 10)
+def get_all(data, start_date=pd.Timestamp(year=2015, month=1, day=1)):
+    general_coef, general_model = fit_general(data[0][0], data[0][1], start_date)
+    ans = build_ans(data[0][0], data[0][1])
 
-    X_train, reg_train = proc(data[0][0], general_coef)
-    X_val, reg_val = proc(data[1][0], general_coef)
-    X_test, reg_test = proc(data[2], general_coef)
+    X_train, reg_train = proc(data[0][0], general_coef, ans)
+    X_val, reg_val = proc(data[1][0], general_coef, ans)
+    X_test, reg_test = proc(data[2], general_coef, ans)
 
     return (X_train, data[0][1], reg_train), (X_val, data[1][1], reg_val), (X_test, reg_test)
