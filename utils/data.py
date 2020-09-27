@@ -17,10 +17,12 @@ def load_data(PATH='data/P/'):
     return base, train, test, sample
 
 
-def build_mapping(train, base, path='../utils/'):
+def build_mapping(train, base, path='../utils/', path2='./'):
     keys = set(base['city_quadkey'])
     kd = pd.DataFrame(pd.Series(list(keys), name='quadkeys'))
     base = pd.concat([base, pd.get_dummies(base['building_type'])], axis=1)
+
+    culture = pd.read_csv(path2).drop('Unnamed: 0', axis=1)
 
     latlon = pd.Series(list(zip(base.latitude.values, base.longitude.values)))
     d2c = dist_to_center(latlon)
@@ -41,11 +43,11 @@ def build_mapping(train, base, path='../utils/'):
     joint = kd.join(bd, on='quadkeys')
 
     aggs_count = base.groupby('city_quadkey')['longitude'].count()
-    aggs_float = base.groupby('city_quadkey')[float_cols].agg(['mean', 'median'])
+    aggs_float = base.groupby('city_quadkey')[float_cols].agg(['mean', 'median', 'std'])
     aggs_bin = base.groupby('city_quadkey')[bin_cols].agg('mean')
 
     aggs = pd.DataFrame(pd.Series(aggs_count, name='count'))
-    for fun in ['mean', 'median']:
+    for fun in ['mean', 'median', 'std']:
         for col in float_cols:
             aggs[col + '_' + fun] = aggs_float[col][fun]
 
@@ -55,6 +57,7 @@ def build_mapping(train, base, path='../utils/'):
     aggs['line_color'] = base.groupby('city_quadkey')['line_color'].agg(lambda x: x.value_counts().index[0])
 
     joint = joint.join(aggs, on='quadkeys')
+    joint = joint.join(culture.set_index('hash'), on='quadkeys')
 
     to_rm = ['avg_price_sqm', 'month', 'city_quadkey', 'median_price_sqm']
     feats = list(train.columns)
