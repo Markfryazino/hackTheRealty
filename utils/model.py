@@ -13,12 +13,14 @@ class XGBModel:
         self.model = xgboost.XGBRegressor(**params)
 
     def fit(self, X, y, val):
+        X.drop(['city_quadkey', 'month'], axis=1, inplace=True)
         if type(X) == pd.DataFrame:
             X = X.values
         if type(y) == pd.Series:
             y = y.values
 
         val_x, val_y = val
+        val_x.drop(['city_quadkey', 'month'], axis=1, inplace=True)
         if type(val_x) == pd.DataFrame:
             val_x = val_x.values
         if type(val_y) == pd.Series:
@@ -32,7 +34,11 @@ class XGBModel:
             self.model.fit(X, y, eval_set=[(X, y), (val_x, val_y)], eval_metric=xgbmape)
 
     def predict(self, X):
+        if 'city_quadkey' in X.columns:
+            X.drop(['city_quadkey', 'month'], axis=1, inplace=True)
         if type(X) == pd.DataFrame:
             X = X.values
 
         return self.model.predict(X)
+
+
