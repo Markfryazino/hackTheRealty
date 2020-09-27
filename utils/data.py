@@ -192,3 +192,10 @@ def get_all(data, start_date=pd.Timestamp(year=2015, month=1, day=1)):
     X_test, reg_test = proc(data[2], general_coef, ans)
 
     return (X_train, data[0][1], reg_train), (X_val, data[1][1], reg_val), (X_test, reg_test)
+
+
+def kill_outlier_prices(train):
+    mask = train.groupby("city_quadkey").avg_price_sqm.\
+      transform(lambda x : (x > x.mean() - x.std() * 2) & (x < x.mean() + x.std() * 2)).eq(1)
+    masked = pd.DataFrame({'is_ok': mask, 'city_quadkey': train.city_quadkey})
+    return train.loc[mask | masked.groupby('city_quadkey').is_ok.transform(lambda x: x.sum() <= x.shape[0] / 2.)]

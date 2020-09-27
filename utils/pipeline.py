@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from .data import preprocess, build_mapping
+from .data import preprocess, build_mapping, kill_outlier_prices
 from sklearn.model_selection import train_test_split
 
 
@@ -14,6 +14,7 @@ def invmape(y_true, y_pred):
 
 
 def get_data(train, base, test=None, cv_ratio=None, path='../utils/'):
+    train = train.sample(frac=1.).reset_index(drop=True).sort_values('month', ignore_index=True)
     y = train['avg_price_sqm']
     val = None
     if cv_ratio is not None:
@@ -32,7 +33,6 @@ def get_data(train, base, test=None, cv_ratio=None, path='../utils/'):
 
 
 def pipeline(model, train, base, test=None, cv_ratio=None, path='../utils/'):
-    train = train.sample(frac=1.).reset_index(drop=True).sort_values('month', ignore_index=True)
     data = get_data(train, base, test, cv_ratio, path=path)
     print('Data processed')
     if cv_ratio is None:
