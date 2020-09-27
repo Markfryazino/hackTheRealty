@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-from .preproc import dist_to_center, closest_tube
+from .preproc import dist_to_center, closest_tube, is_moscow
 from sklearn.linear_model import LinearRegression
 from tqdm import tqdm_notebook as tqdm
 from scipy.stats import pearsonr, spearmanr
@@ -25,7 +25,8 @@ def build_mapping(train, base, path='../utils/'):
     latlon = pd.Series(list(zip(base.latitude.values, base.longitude.values)))
     d2c = dist_to_center(latlon)
     ct = closest_tube(latlon, path=path)
-    base = pd.concat([d2c, ct, base], axis=1)
+    msc = is_moscow(base)
+    base = pd.concat([d2c, ct, msc, base], axis=1)
 
     district_cols = ['beauty_cnt', 'shopping_cnt', 'cafe_restaurant_eating_out_cnt', 'entertainment_cnt',
                      'sport_cnt', 'chain_cnt', 'groceries_and_everyday_items_cnt', 'art_cnt', 'healthcare_cnt',
@@ -34,7 +35,7 @@ def build_mapping(train, base, path='../utils/'):
     float_cols = ['flats_count', 'ceiling_height', 'build_year', 'angle', 'dist',
                   'dist_to_closest_tube']
     bin_cols = ['expect_demolition', 'has_elevator', 'BLOCK', 'BRICK', 'MONOLIT',
-                'MONOLIT_BRICK', 'PANEL', 'UNKNOWN', 'WOOD']
+                'MONOLIT_BRICK', 'PANEL', 'UNKNOWN', 'WOOD', 'is_moscow']
 
     bd = base[district_cols + ['city_quadkey']].set_index('city_quadkey').drop_duplicates()
 
