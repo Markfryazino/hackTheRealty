@@ -22,7 +22,8 @@ def build_mapping(train, base, path='../utils/', path2='./'):
     kd = pd.DataFrame(pd.Series(list(keys), name='quadkeys'))
     base = pd.concat([base, pd.get_dummies(base['building_type'])], axis=1)
 
-    culture = pd.read_csv(path2).drop('Unnamed: 0', axis=1)
+    culture = pd.read_csv(path2 + 'distCulture.csv').drop('Unnamed: 0', axis=1)
+    food = pd.read_csv(path2 + 'foodDist.csv').drop('Unnamed: 0', axis=1)
 
     latlon = pd.Series(list(zip(base.latitude.values, base.longitude.values)))
     d2c = dist_to_center(latlon)
@@ -59,6 +60,7 @@ def build_mapping(train, base, path='../utils/', path2='./'):
 
     joint = joint.join(aggs, on='quadkeys')
     joint = joint.join(culture.set_index('hash'), on='quadkeys')
+    joint = joint.join(food.set_index('hash'), on='quadkeys')
 
     to_rm = ['avg_price_sqm', 'month', 'city_quadkey', 'median_price_sqm']
     feats = list(train.columns)
@@ -75,7 +77,7 @@ def preprocess(data, mapping):
     data = data[['month', 'city_quadkey']]
     data = data.join(mapping, on='city_quadkey')
     data['month'] = data['month'].apply(pd.to_datetime)
-    data['month_id'] = data['month'].apply(lambda x: x.month)
+    #  data['month_id'] = data['month'].apply(lambda x: x.month)
     #  data.drop(['month', 'city_quadkey'], axis=1, inplace=True)
 
     return data
