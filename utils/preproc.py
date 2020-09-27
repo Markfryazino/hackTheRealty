@@ -67,5 +67,6 @@ def dist_to_center(data: pd.Series):
                         columns=['angle', 'dist'])
 
 def is_moscow(house):
-    return 1 - (house.unified_address.str.extract(r'(\w+, Москва)').isna()
+    series = 1 - (house.unified_address.str.extract(r'(\w+, Москва)').isna()
             & house.unified_address.str.extract(r'(Москва, ул. 1-я Квесисская, 9/13)').isna()).astype(int)
+    return series.rename(columns={0: 'is_moscow'})
