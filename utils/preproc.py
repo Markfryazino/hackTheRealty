@@ -65,3 +65,7 @@ def dist_to_center(data: pd.Series):
     dist = data.apply(lambda c: (cor2dist(c[0], c[1], x, y)))
     return pd.DataFrame(np.hstack([angle.values.reshape(-1, 1), dist.values.reshape(-1, 1)]),
                         columns=['angle', 'dist'])
+
+def is_moscow(house):
+    return 1 - (house.unified_address.str.extract(r'(\w+, Москва)').isna()
+            & house.unified_address.str.extract(r'(Москва, ул. 1-я Квесисская, 9/13)').isna()).astype(int)
